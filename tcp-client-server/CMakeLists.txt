@@ -21,3 +21,10 @@ add_executable(server
         util.c
         config.c
 )
+
+add_executable(multiprocess-server
+        multiprocess-server.c
+        message.c
+        util.c
+        config.c
+)

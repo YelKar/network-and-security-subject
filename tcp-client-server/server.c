@@ -65,19 +65,24 @@ static int ProcessClient(int conn, const struct Config* config)
 		return 0;
 	}
 
-	LOG("Got message: name=\"%s\", number=%d", message.payload.message, message.payload.number);
-
-	if (message.payload.number > 100 || message.payload.number < 1)
+	int32_t client_number = 0;
+	if (GetMessageNumber(&message, &client_number) != 0)
 	{
-		LOG_ERR("Got number out of range 1-100.", message.payload.number);
+		LOG_PERR("Failed to extract client number");
 		FreeMessage(&message);
-		return 1;
+		return 0;
 	}
 
-	PrintResult(config->name, message.payload.message, config->number, message.payload.number);
+	const char* client_name = GetMessageText(&message);
+	LOG("Got message (v%d): name=\"%s\", number=%d",
+	    message.header.version, client_name ? client_name : "", client_number);
 
-	LOG("Message sending (name: \"%s\", number: %d)...", config->name, config->number);
-	if (SendMessage(conn, (uint8_t)config->number, config->name, strlen(config->name), RESPONSE_MESSAGE) != 0)
+	PrintResult(config->name, client_name ? client_name : "", config->number, client_number);
+
+	LOG("Message sending (v%d, name: \"%s\", number: %d)...",
+	    message.header.version, config->name, config->number);
+
+	if (SendMessage(conn, message.header.version, config->number, config->name, strlen(config->name), RESPONSE_MESSAGE) != 0)
 	{
 		LOG_PERR("SendMessage failed");
 	}
@@ -87,6 +92,13 @@ static int ProcessClient(int conn, const struct Config* config)
 	}
 
 	FreeMessage(&message);
+
+	if (client_number < 1 || client_number > 100)
+	{
+		LOG_INFO("Received number %d out of range [1; 100]. Initiating server shutdown...", client_number);
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -140,7 +152,7 @@ int main(const int argc, char** argv)
 
 	ServerLoop(sock, &config);
 
-	LOG("Server closing (fd: %d)...", sock);
+	LOG("Server closing listening socket (fd: %d)...", sock);
 	close(sock);
 	LOG_INFO("Server finished.");
 

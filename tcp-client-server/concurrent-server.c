@@ -7,10 +7,14 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/epoll.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+
+#define MAX_EVENTS 64
 
 MAKE_LOGGER("SERVER");
 
@@ -20,6 +24,16 @@ static void SignalHandler(int sig)
 {
 	(void)sig;
 	g_signal_received = 1;
+}
+
+static int SetNonBlocking(int fd)
+{
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+	{
+		return -1;
+	}
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 static int SetupServerSocket(uint16_t port)
@@ -36,7 +50,14 @@ static int SetupServerSocket(uint16_t port)
 	int opt = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 	{
-		LOG_PERR("setsockopt failed");
+		LOG_PERR("setsockopt SO_REUSEADDR failed");
+		close(sock);
+		return -1;
+	}
+
+	if (SetNonBlocking(sock) < 0)
+	{
+		LOG_PERR("Failed to set listening socket non-blocking");
 		close(sock);
 		return -1;
 	}
@@ -73,48 +94,94 @@ static void ServerLoop(int sock, ServerContext* ctx)
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
 
-	struct sockaddr_in client;
-	socklen_t len = sizeof(client);
+	int epoll_fd = epoll_create1(0);
+	if (epoll_fd < 0)
+	{
+		LOG_PERR("epoll_create1 failed");
+		return;
+	}
+
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = sock;
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev) < 0)
+	{
+		LOG_PERR("epoll_ctl failed");
+		close(epoll_fd);
+		return;
+	}
+
+	struct epoll_event events[MAX_EVENTS];
+	LOG_INFO("Asynchronous event loop started (epoll_fd: %d).", epoll_fd);
 
 	while (!ctx->stop_server && !g_signal_received)
 	{
-		LOG("Waiting for request (port: %d)...", SERVER_PORT);
-		const int conn = accept(sock, (struct sockaddr*)&client, &len);
+		int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 250);
 
-		if (conn < 0)
+		if (nfds < 0)
 		{
 			if (errno == EINTR)
 			{
-				break;
+				continue;
 			}
-			LOG_PERR("Accept failed");
+			LOG_PERR("epoll_wait failed");
 			break;
 		}
 
-		struct timeval tv;
-		tv.tv_sec = 10;
-		tv.tv_usec = 0;
-		if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+		for (int i = 0; i < nfds; i++)
 		{
-			LOG_PERR("Failed to set 10s timeout");
-		}
+			if (events[i].data.fd == sock)
+			{
+				for (;;)
+				{
+					struct sockaddr_in client;
+					socklen_t len = sizeof(client);
+					const int conn = accept(sock, (struct sockaddr*)&client, &len);
 
-		char client_ip[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &client.sin_addr, client_ip, sizeof(client_ip));
-		LOG_INFO("Client connected %s:%d (fd: %d).", client_ip, ntohs(client.sin_port), conn);
+					if (conn < 0)
+					{
+						if (errno == EAGAIN || errno == EWOULDBLOCK)
+						{
+							break;
+						}
+						if (errno == EINTR)
+						{
+							continue;
+						}
+						LOG_PERR("accept failed");
+						break;
+					}
 
-		if (EnqueueClient(ctx, conn, client) != 0)
-		{
-			LOG_ERR("Queue is full or server is stopping. Closing connection (fd: %d)...", conn);
-			close(conn);
+					struct timeval tv = { .tv_sec = 10, .tv_usec = 0 };
+					if (setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+					{
+						LOG_PERR("Failed to set 10s receive timeout");
+					}
+
+					char client_ip[INET_ADDRSTRLEN];
+					inet_ntop(AF_INET, &client.sin_addr, client_ip, sizeof(client_ip));
+					LOG_INFO("Accepted client %s:%d (fd: %d).", client_ip, ntohs(client.sin_port), conn);
+
+					if (EnqueueClient(ctx, conn, client) != 0)
+					{
+						LOG_ERR("Queue is full or server stopping. Rejecting client (fd: %d)...", conn);
+						close(conn);
+					}
+				}
+			}
 		}
 	}
 
 	if (g_signal_received)
 	{
-		LOG_ERR("Interrupt signal received. Initiating graceful shutdown...");
+		LOG_ERR("Signal SIGINT/SIGTERM received. Initiating graceful shutdown...");
+	}
+	else
+	{
+		LOG_INFO("Stop condition reached. Initiating graceful shutdown...");
 	}
 
+	close(epoll_fd);
 	LOG("Waiting for thread pool to drain and terminate...");
 	StopServerContext(ctx);
 }
@@ -132,11 +199,11 @@ int main(const int argc, char** argv)
 	ServerContext ctx;
 	if (InitServerContext(&ctx, &config) != 0)
 	{
-		LOG_ERR("Failed to initialize server thread pool.");
+		LOG_ERR("Failed to initialize thread pool.");
 		return 1;
 	}
 
-	LOG_INFO("Thread pool initialized with %zu worker threads.", ctx.worker_count);
+	LOG_INFO("Thread pool initialized with %zu workers.", ctx.worker_count);
 
 	const int sock = SetupServerSocket(SERVER_PORT);
 	if (sock < 0)

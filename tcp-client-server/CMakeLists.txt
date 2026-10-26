@@ -13,6 +13,7 @@ add_executable(client
         message.c
         util.c
         config.c
+        client_core.c
 )
 
 add_executable(server

@@ -48,7 +48,6 @@ static int CommunicateWithServer(int sock, const struct Config* config)
 		return -1;
 	}
 	LOG_INFO("Data was sent.");
-
 	LOG("Waiting for response...");
 	struct Message message;
 	if (ReceiveMessage(sock, &message) != 0)

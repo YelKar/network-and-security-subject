@@ -28,3 +28,15 @@ add_executable(multiprocess-server
         util.c
         config.c
 )
+
+add_compile_definitions(_GNU_SOURCE)
+add_executable(concurrent-server
+        concurrent-server.c
+        thread_pool.c
+        message.c
+        util.c
+        config.c
+)
+
+target_link_options(concurrent-server PRIVATE -pthread)
+target_compile_options(concurrent-server PRIVATE -pthread)

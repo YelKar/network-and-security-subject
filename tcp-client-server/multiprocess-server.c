@@ -81,7 +81,7 @@ static int ProcessClient(int conn, const struct Config* config)
 
 	if (message.payload.number > 100 || message.payload.number < 1)
 	{
-		LOG_ERR("Got number %d (out of range 1-100)...", message.payload.number);
+		LOG_ERR("Got number (out of range 1-100)...");
 		FreeMessage(&message);
 		return 1;
 	}
@@ -151,7 +151,6 @@ static void ServerLoop(int sock, const struct Config* config)
 		{
 			close(sock);
 
-			sleep(1);
 			int should_stop = ProcessClient(conn, config);
 
 			LOG("Client connection closing (fd: %d)...", conn);

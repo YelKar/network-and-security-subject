@@ -1,7 +1,7 @@
-#include "config.h"
-#include "client_core.h"
-#include "logger.h"
-#include "message.h"
+#include <../include/tcp-server/sync/logger.h>
+#include <tcp-server/client_core.h>
+#include <tcp-server/config.h>
+#include <tcp-server/message.h>
 
 MAKE_LOGGER("CLIENT");
 

@@ -1,8 +1,7 @@
-#include "config.h"
-#include "message.h"
+#include <tcp-server/config.h>
+#include <tcp-server/message.h>
 
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

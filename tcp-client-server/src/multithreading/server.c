@@ -1,7 +1,7 @@
-#include "config.h"
-#include "message.h"
-#include "concurrent-logger.h"
-#include "thread_pool.h"
+#include <tcp-server/config.h>
+#include <tcp-server/message.h>
+#include <tcp-server/multithreading/logger.h>
+#include <tcp-server/multithreading/thread_pool.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>

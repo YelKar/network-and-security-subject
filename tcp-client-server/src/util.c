@@ -1,4 +1,4 @@
-#include "util.h"
+#include <tcp-server/util.h>
 #include <stdio.h>
 
 void PrintResult(const char* myName, const char* otherName, int myNumber, int otherNumber)

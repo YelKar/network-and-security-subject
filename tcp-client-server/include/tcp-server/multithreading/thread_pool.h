@@ -1,7 +1,6 @@
 #pragma once
 
 #include <pthread.h>
-#include <stddef.h>
 #include <netinet/in.h>
 
 typedef struct ServerContext ServerContext;

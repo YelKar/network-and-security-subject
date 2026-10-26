@@ -8,36 +8,39 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_compile_definitions(_POSIX_C_SOURCE=200809L)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include_directories(
+        include
+)
+
 add_executable(client
-        client.c
-        message.c
-        util.c
-        config.c
-        client_core.c
+        src/client.c
+        src/client_core.c
+        src/message.c
+        src/util.c
+        src/config.c
 )
 
 add_executable(server
-        server.c
-        message.c
-        util.c
-        config.c
+        src/sync/server.c
+        src/message.c
+        src/util.c
+        src/config.c
 )
 
 add_executable(multiprocess-server
-        multiprocess-server.c
-        message.c
-        util.c
-        config.c
+        src/multiprocess/server.c
+        src/message.c
+        src/util.c
+        src/config.c
 )
 
 add_compile_definitions(_GNU_SOURCE)
 add_executable(concurrent-server
-        concurrent-server.c
-        thread_pool.c
-        message.c
-        util.c
-        config.c
+        src/multithreading/server.c
+        src/multithreading/thread_pool.c
+        src/message.c
+        src/util.c
+        src/config.c
 )
-
 target_link_options(concurrent-server PRIVATE -pthread)
 target_compile_options(concurrent-server PRIVATE -pthread)

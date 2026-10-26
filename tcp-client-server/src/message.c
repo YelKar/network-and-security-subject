@@ -1,4 +1,4 @@
-#include "message.h"
+#include <tcp-server/message.h>
 
 #include <arpa/inet.h>
 #include <errno.h>

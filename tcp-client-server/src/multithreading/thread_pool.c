@@ -1,8 +1,8 @@
-#include "thread_pool.h"
-#include "config.h"
-#include "message.h"
-#include "util.h"
-#include "concurrent-logger.h"
+#include <tcp-server/multithreading/thread_pool.h>
+#include <tcp-server/config.h>
+#include <tcp-server/message.h>
+#include <tcp-server/util.h>
+#include <tcp-server/multithreading/logger.h>
 
 #include <stdlib.h>
 #include <unistd.h>

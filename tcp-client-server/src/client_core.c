@@ -1,4 +1,4 @@
-#include <../include/tcp-server/sync/logger.h>
+#include <tcp-server/sync/logger.h>
 #include <tcp-server/client_core.h>
 #include <tcp-server/message.h>
 #include <tcp-server/util.h>
@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <poll.h>
 
 MAKE_LOGGER("CLIENT");
 
@@ -54,8 +55,25 @@ int ConnectToServer(const char* host, uint16_t port, bool verbose)
 	{
 		LOG("Connecting to server %s:%d...", host, port);
 	}
-	if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) != 0)
+
+	while (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) != 0)
 	{
+		if (errno == EINTR)
+		{
+			struct pollfd pfd = { .fd = sock, .events = POLLOUT };
+			int poll_res = poll(&pfd, 1, 5000);
+
+			if (poll_res > 0)
+			{
+				int so_error = 0;
+				socklen_t len = sizeof(so_error);
+				if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len) == 0 && so_error == 0)
+				{
+					break;
+				}
+			}
+		}
+
 		if (verbose)
 		{
 			LOG_PERR("Connect failed");
@@ -63,6 +81,7 @@ int ConnectToServer(const char* host, uint16_t port, bool verbose)
 		close(sock);
 		return -1;
 	}
+
 	if (verbose)
 	{
 		LOG_INFO("Connected to server.");

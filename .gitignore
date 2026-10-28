@@ -2,6 +2,9 @@ tcp-client-server/CMakeFiles/
 tcp-client-server/cmake-build-debug/
 tcp-client-server/build/
 tcp-client-server/.cache/clangd/index/
+webserver/build/
+webserver/build-*/
+webserver/cmake-build-*/
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

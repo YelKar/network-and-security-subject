@@ -1,5 +1,5 @@
-#include <smtp/core.h>
 #include <smtp/SMTPClient.h>
+#include <smtp/core.h>
 
 #include <algorithm>
 #include <fstream>
@@ -21,22 +21,18 @@ struct ProviderPreset
 };
 
 const std::vector<ProviderPreset> kProviderPresets = {
-	{
-		"yandex",
+	{ "yandex",
 		"smtp.yandex.ru",
 		587,
 		true,
 		true,
-		{ "yandex.key", ".yandex.key", ".yandex_key", "credentials.txt" }
-	},
-	{
-		"mailru",
+		{ "yandex.key", ".yandex.key", ".yandex_key", "credentials.txt" } },
+	{ "mailru",
 		"smtp.mail.ru",
 		587,
 		true,
 		true,
-		{ "mailru.key", ".mailru.key", ".mailru_key", "credentials.txt" }
-	}
+		{ "mailru.key", ".mailru.key", ".mailru_key", "credentials.txt" } }
 };
 
 const ProviderPreset* FindProviderPreset(std::string_view input)
@@ -55,26 +51,19 @@ void PrintUsage(const char* progName)
 {
 	std::cout << "Usage: " << progName << " <host|provider> -t <recipient> [options]\n\n"
 			  << "Required Parameters:\n"
-			  << "  <host|provider>            Target server or provider alias (e.g. yandex, mailru, gmail)\n"
+			  << "  <host|provider>            Target server or provider alias (e.g. yandex, mailru)\n"
 			  << "  -t, --to <email>           Recipient email address\n"
 			  << "  -s, --subject <text>       Email subject (required unless specified in message file)\n"
 			  << "  -b, --body <text>          Email body text\n"
 			  << "      OR\n"
 			  << "  -m, --message-file <path>  Load entire email from file\n\n"
 			  << "Optional Parameters:\n"
-			  << "  [port]                     Port number (default: 587 for presets/submission, 25 for plain)\n"
+			  << "  [port]                     Port number (default: 587)\n"
 			  << "  -f, --from <email>         Sender email address\n"
-			  << "  -k, --key-file <path>      Path to credentials file (overrides auto-detection)\n"
+			  << "  -k, --key-file <path>      Path to credentials file\n"
 			  << "  --tls / --no-tls           Force enable/disable STARTTLS\n"
 			  << "  --auth / --no-auth         Force enable/disable Authentication\n"
-			  << "  -h, --help                 Show this help message\n\n"
-			  << "Examples:\n"
-			  << "  1) Using provider alias (Yandex):\n"
-			  << "     " << progName << " yandex -t user@example.com -s \"Test\" -b \"Hello\"\n\n"
-			  << "  2) Arbitrary host with STARTTLS & Auth:\n"
-			  << "     " << progName << " smtp.custom.com 587 -k secret.txt -t user@example.com -m letter.txt\n\n"
-			  << "  3) Local unauthenticated mock server:\n"
-			  << "     " << progName << " 127.0.0.1 1025 -f me@test.local -t bob@test.local -s \"Hi\" -b \"Body\"\n";
+			  << "  -h, --help                 Show this help message\n\n";
 }
 
 void TrimString(std::string& str)
@@ -94,10 +83,11 @@ void TrimString(std::string& str)
 	}
 }
 
-bool LoadCredentials(const std::string& explicitPath,
-					 const std::vector<std::string>& searchPaths,
-					 std::string& userLogin,
-					 std::string& appPassword)
+bool LoadCredentials(
+	const std::string& explicitPath,
+	const std::vector<std::string>& searchPaths,
+	std::string& userLogin,
+	std::string& appPassword)
 {
 	std::vector<std::string> pathsToTry;
 	if (!explicitPath.empty())
@@ -157,7 +147,7 @@ bool LoadMessageFile(const std::string& filePath, std::string& subject, std::str
 	}
 
 	std::string content((std::istreambuf_iterator<char>(file)),
-						std::istreambuf_iterator<char>());
+		std::istreambuf_iterator<char>());
 
 	if (content.empty())
 	{
@@ -324,7 +314,8 @@ bool ParseCommandLine(const int argc, char* argv[], AppConfig& config)
 
 	if (config.recipientEmail.empty())
 	{
-		std::cerr << "[ERROR] Recipient email is strictly required! Specify with -t or --to.\n" << std::endl;
+		std::cerr << "[ERROR] Recipient email is strictly required! Specify with -t or --to.\n"
+				  << std::endl;
 		PrintUsage(argv[0]);
 		return false;
 	}
@@ -339,14 +330,16 @@ bool ParseCommandLine(const int argc, char* argv[], AppConfig& config)
 
 	if (config.emailBody.empty())
 	{
-		std::cerr << "[ERROR] Email body is strictly required! Specify with -b/--body or -m/--message-file.\n" << std::endl;
+		std::cerr << "[ERROR] Email body is strictly required! Specify with -b/--body or -m/--message-file.\n"
+				  << std::endl;
 		PrintUsage(argv[0]);
 		return false;
 	}
 
 	if (config.emailSubject.empty())
 	{
-		std::cerr << "[ERROR] Email subject is strictly required! Specify with -s or inside message file.\n" << std::endl;
+		std::cerr << "[ERROR] Email subject is strictly required! Specify with -s or inside message file.\n"
+				  << std::endl;
 		PrintUsage(argv[0]);
 		return false;
 	}
@@ -363,7 +356,8 @@ int RunClient(const AppConfig& config)
 	{
 		if (!LoadCredentials(config.keyFilePath, config.defaultKeySearchPaths, userLogin, appPassword))
 		{
-			std::cerr << "[ERROR] Could not load credentials for " << config.host << "!\n" << "Please provide credentials file via -k <path> or in current dir." << std::endl;
+			std::cerr << "[ERROR] Could not load credentials for " << config.host << "!\n"
+					  << "Please provide credentials file via -k <path> or in current dir." << std::endl;
 			return 1;
 		}
 	}
@@ -377,11 +371,11 @@ int RunClient(const AppConfig& config)
 
 	const smtp::Email email = PrepareEmail(config, senderAddress);
 
-	std::cout << "=== SMTP Client Launching ===" << std::endl;
-	std::cout << "Target:  " << config.host << ":" << config.port << std::endl;
-	std::cout << "From:    " << email.from << std::endl;
-	std::cout << "To:      " << email.to << std::endl;
-	std::cout << "Subject: " << email.subject << std::endl;
+	std::cout << "\033[33;1m--- SMTP Client Launching ---\033[0;33m" << std::endl;
+	std::cout << "Target:  \033[1m" << config.host << "\033[22m:" << config.port << std::endl;
+	std::cout << "From:    \033[1m" << email.from << "\033[22m" << std::endl;
+	std::cout << "To:      \033[1m" << email.to << "\033[22m" << std::endl;
+	std::cout << "Subject: \033[1m" << email.subject << "\033[22m\033[0m" << std::endl;
 
 	smtp::SMTPClient client(config.host, config.port);
 
@@ -406,6 +400,6 @@ int RunClient(const AppConfig& config)
 	std::cout << "\n[5] Disconnecting..." << std::endl;
 	client.Disconnect();
 
-	std::cout << "\n[SUCCESS] Email was sent successfully!" << std::endl;
+	std::cout << "\n\033[1;32m[SUCCESS] Email was sent successfully!\033[0m" << std::endl;
 	return 0;
 }

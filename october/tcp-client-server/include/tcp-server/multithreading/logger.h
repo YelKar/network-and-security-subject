@@ -10,23 +10,22 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <sys/types.h>
 
 static pthread_mutex_t g_log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static inline void LoggerLock(void)
+static void LoggerLock()
 {
 	int saved_errno = errno;
 	pthread_mutex_lock(&g_log_mutex);
 	errno = saved_errno;
 }
 
-static inline void LoggerUnlock(void)
+static void LoggerUnlock()
 {
 	pthread_mutex_unlock(&g_log_mutex);
 }
 
-static inline void LogMessageFormatted(const char* tag, const char* color, const char* fmt, ...)
+static void LogMessageFormatted(const char* tag, const char* color, const char* fmt, ...)
 {
 	LoggerLock();
 

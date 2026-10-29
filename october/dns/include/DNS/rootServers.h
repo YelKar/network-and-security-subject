@@ -8,7 +8,7 @@ namespace dns
 
 struct DomainServer
 {
-	std::string_view name;
+	std::string name;
 	std::string_view ipv4;
 };
 

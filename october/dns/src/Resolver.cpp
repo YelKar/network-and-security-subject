@@ -155,6 +155,19 @@ std::vector<DomainServer> Resolver::ExtractNextServers(
 {
 	m_debugStream(m_debug) << "No answers found. Inspecting authority..." << std::endl;
 
+	auto normalize = [](const std::string_view str) {
+		std::string s(str);
+		while (!s.empty() && s.back() == '.')
+		{
+			s.pop_back();
+		}
+		for (char& c : s)
+		{
+			c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+		}
+		return s;
+	};
+
 	std::unordered_multimap<std::string, std::string> glueRecords;
 	for (const auto& additionalRecord : responsePacket.additional)
 	{
@@ -163,7 +176,7 @@ std::vector<DomainServer> Resolver::ExtractNextServers(
 			const std::string ipAddress = additionalRecord.AsIPString();
 			if (!ipAddress.empty())
 			{
-				glueRecords.emplace(additionalRecord.name, ipAddress);
+				glueRecords.emplace(normalize(additionalRecord.name), ipAddress);
 			}
 		}
 	}
@@ -175,7 +188,7 @@ std::vector<DomainServer> Resolver::ExtractNextServers(
 	{
 		if (authRecord.type == DNSType::NS)
 		{
-			const std::string& nsName = authRecord.domainName;
+			const std::string nsName = normalize(authRecord.domainName);
 			auto [begin, end] = glueRecords.equal_range(nsName);
 
 			if (begin != end)

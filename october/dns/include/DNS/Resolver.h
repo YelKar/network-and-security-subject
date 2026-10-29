@@ -21,7 +21,7 @@ public:
 
 	std::vector<std::string> Resolve(std::string_view domain, DNSType dnsType, const std::vector<DomainServer>& domainServers);
 	std::vector<std::string> Resolve(const std::vector<QuestionSection>& questions, const std::vector<DomainServer>& domainServers);
-	DNSPacket QueryCandidateServers(const std::vector<DomainServer>& candidateServers, const DNSPacket& queryPacket, int stepIndex) const;
+	[[nodiscard]] DNSPacket QueryCandidateServers(const std::vector<DomainServer>& candidateServers, const DNSPacket& queryPacket, int stepIndex) const;
 
 private:
 	bool m_debug{ false };
